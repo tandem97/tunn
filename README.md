@@ -32,7 +32,7 @@
 ### Quick Install
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/strandnerd/tunn/main/scripts/install.sh | sudo sh
+curl -sSL https://raw.githubusercontent.com/strandnerd/tunn/main/scripts/install.sh | sh
 ```
 
 ### From Go Install

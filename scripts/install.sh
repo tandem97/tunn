@@ -61,16 +61,9 @@ ASSET="tunn-${PLATFORM_OS}-${PLATFORM_ARCH}"
 INSTALL_DIR=${INSTALL_DIR:-/usr/local/bin}
 
 if [ ! -d "$INSTALL_DIR" ]; then
-  mkdir -p "$INSTALL_DIR" 2>/dev/null || {
-    echo "failed to create $INSTALL_DIR; set INSTALL_DIR to a writable directory" >&2
-    exit 1
-  }
-fi
-
-if [ ! -w "$INSTALL_DIR" ]; then
-  echo "insufficient permissions to write to $INSTALL_DIR" >&2
-  echo "rerun with sudo or set INSTALL_DIR to a writable location" >&2
-  exit 1
+  if ! mkdir -p "$INSTALL_DIR" 2>/dev/null; then
+    echo "Note: $INSTALL_DIR does not exist and requires elevated privileges to create" >&2
+  fi
 fi
 
 TMPFILE=$(mktemp)
@@ -84,14 +77,25 @@ curl -fsSL -o "$TMPFILE" "https://github.com/${REPO}/releases/latest/download/${
 
 TARGET="$INSTALL_DIR/tunn"
 
-if ! cp "$TMPFILE" "$TARGET" 2>/dev/null; then
-  echo "failed to copy tunn to $TARGET; set INSTALL_DIR to a writable location" >&2
-  exit 1
-fi
-
-if ! chmod +x "$TARGET" 2>/dev/null; then
-  echo "failed to mark $TARGET as executable" >&2
-  exit 1
+# Try to install directly first
+if cp "$TMPFILE" "$TARGET" 2>/dev/null && chmod +x "$TARGET" 2>/dev/null; then
+  : # Success
+else
+  # Need elevated privileges
+  echo "Installing to $INSTALL_DIR requires elevated privileges..."
+  if command -v sudo >/dev/null 2>&1; then
+    sudo cp "$TMPFILE" "$TARGET" || {
+      echo "failed to copy tunn to $TARGET" >&2
+      exit 1
+    }
+    sudo chmod +x "$TARGET" || {
+      echo "failed to mark $TARGET as executable" >&2
+      exit 1
+    }
+  else
+    echo "sudo not available; please copy $TMPFILE to $TARGET manually" >&2
+    exit 1
+  fi
 fi
 
 echo "tunn installed to $INSTALL_DIR"
